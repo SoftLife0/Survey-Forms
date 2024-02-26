@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Question</title>
+</head>
+<body>
+    <h1>Add New Question</h1>
+    <form method="POST">
+        {{ form.csrf_token }}
+        <div>
+            {{ form.text.label }}: {{ form.text(size=20) }}
+        </div>
+        <div>
+            {{ form.response_type.label }}: {{ form.response_type() }}
+        </div>
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>

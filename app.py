@@ -1,27 +1,22 @@
-from flask import Flask,redirect,url_for,render_template,request
+from flask import Flask, redirect, url_for, render_template, request
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import or_
-from forms import *
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.dialects.postgresql import JSON
 from flask_migrate import Migrate
+from forms import *
 
-
-app=Flask(__name__)
-app.config["SECRET_KEY"] = (
-    "e98148fdc372680af4ddb5cfba21aeae90afed81f6b745c3a33444a2deaa420e"
-)
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
+app = Flask(__name__)
+app.config["SECRET_KEY"] = "your_secret_key_here"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///test.db"
-db = SQLAlchemy(app)
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 class Survey(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    slug = db.Column(db.String(100), unique=True, nullable=False)
-    fields = db.relationship('SurveyField', backref='survey', lazy=True)
+    consumer = db.Column(db.String(50), nullable=True)
+    fields = db.relationship('SurveyField', backref='survey_parent', lazy=True)
 
     def __repr__(self):
         return f"Survey('{self.name}', '{self.description}')"
@@ -29,16 +24,16 @@ class Survey(db.Model):
 class SurveyField(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     label = db.Column(db.String(100), nullable=False)
-    field_type = db.Column(db.String(50), nullable=False)  # Type of form field (e.g., text, select, checkbox)
-    answer_type = db.Column(db.String(50), nullable=False)  # Type of answer response (e.g., text, single_select, multiple_select)
-    options = db.Column(db.Text, nullable=True)  # Options for select or checkbox fields (stored as JSON string)
+    field_type = db.Column(db.String(50), nullable=False)
+    answer_type = db.Column(db.String(50), nullable=False)
+    options = db.Column(db.Text, nullable=True)
 
     survey_id = db.Column(db.Integer, db.ForeignKey('survey.id'), nullable=False)
-    survey = db.relationship('Survey', backref=db.backref('fields', lazy=True))
+    survey = db.relationship('Survey', backref=db.backref('survey_fields', lazy=True))
 
     def __repr__(self):
         return f"SurveyField('{self.label}', '{self.field_type}', '{self.answer_type}')"
-    
+
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.String(255), nullable=False)
@@ -72,7 +67,7 @@ def newForm():
             )
             db.session.add(new_survey)
             db.session.commit()
-            return redirect(url_for('add_question', formId=new_survey.id))
+            return redirect(url_for('add_question', surveyId=new_survey.id))
     return render_template('newform.html', form=form, consumers=consumers)
 
 @app.route('/add_question/<int:surveyId>', methods=['GET', 'POST'])
@@ -88,7 +83,7 @@ def add_question(surveyId):
         db.session.add(new_question)
         db.session.commit()
         return redirect(url_for('add_question', surveyId=surveyId))
-    return render_template('add_question.html', form=form, survey=survey)
+    return render_template('addQuestion.html', form=form, survey=survey)
 
 if __name__ == '__main__':
     #DEBUG is SET to TRUE. CHANGE FOR PROD
